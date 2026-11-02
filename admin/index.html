@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e6e7df"><meta name="robots" content="noindex,nofollow">
+  <title>Content studio | Okoro Emmanuel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"><link href="https://api.fontshare.com/v2/css?f[]=zodiak@300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+  <script src="../cms-config.js"></script>
+  <script type="module" src="admin.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
+  <header class="admin-header">
+    <a class="brand" href="../index.html"><span class="brand-mark">OE.</span><span>Content studio</span></a>
+    <div class="header-actions"><a href="../index.html" target="_blank" rel="noreferrer">View site <span aria-hidden="true">↗</span></a><button id="logout" class="quiet-button" type="button" hidden>Sign out</button></div>
+  </header>
+  <main id="workspace">
+    <div class="workspace-heading"><h1>Content library</h1><div class="heading-actions" hidden><button id="import-backup" class="secondary-button" type="button">Import backup</button><input id="backup-file" type="file" accept="application/json,.json" hidden><button id="export-backup" class="secondary-button" type="button">Export backup</button><button id="restore-pages" class="secondary-button" type="button" hidden>Restore default pages</button><button id="new-content" class="primary-button" type="button">New content <span aria-hidden="true">＋</span></button></div></div>
+    <section id="setup-screen" class="setup-screen" hidden>
+      <h2>Connect your content store</h2>
+      <p>The editor is ready. Add the public project URL and anon key, then run the database setup script.</p>
+      <ol class="setup-steps"><li>Create a Supabase project.</li><li>Run <code>supabase-schema.sql</code> and invite the owner email.</li><li>Set the project URL and anon key in <code>cms-config.js</code>.</li></ol><a class="primary-button" href="../CMS-SETUP.md">Open setup guide</a>
+      <p class="muted">The project URL and anon key are public by design. The database policies restrict editing to your account.</p>
+    </section>
+    <section id="login-screen" class="login-screen" hidden>
+      <h2>Sign in to publish</h2>
+      <p>Enter your owner email. We’ll send a secure sign-in link; only the approved owner account can edit this site.</p>
+      <form id="login-form"><label for="login-email">Email address</label><input id="login-email" name="email" type="email" autocomplete="email" required><button class="primary-button" type="submit">Send sign-in link</button><p id="login-message" class="form-message" role="status"></p></form>
+    </section>
+    <section id="editor-app" class="editor-app" hidden>
+      <p id="mode-banner" class="mode-banner" hidden></p>
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+      <div class="editor-layout">
+        <aside class="library-panel" aria-label="Content items">
+          <div class="library-controls"><div class="segmented" role="group" aria-label="Content type"><button type="button" class="segment active" data-kind="project" aria-pressed="true">Projects</button><button type="button" class="segment" data-kind="article" aria-pressed="false">Articles</button><button type="button" class="segment" data-kind="page" aria-pressed="false">Pages</button></div><label class="sr-only" for="search-content">Search titles…</label><input id="search-content" type="search" placeholder="Search titles…"></div>
+          <div id="content-list" class="content-list" aria-live="polite"></div>
+        </aside>
+        <section class="form-panel" aria-label="Content editor">
+          <div id="empty-editor" class="empty-editor"><h2>Choose a project or article to edit</h2><p>Use the list on the left to open an existing item, or create a new one.</p></div>
+          <form id="content-form" hidden>
+            <div class="form-heading"><div><p id="form-kind-label">New project</p><h2 id="form-title">Project details</h2></div><button id="delete-content" class="danger-button" type="button">Delete</button></div>
+            <input type="hidden" name="id">
+            <div class="field-grid"><div class="field field-wide"><label id="title-label" for="title">Title <span>*</span></label><input id="title" name="title" required maxlength="120" placeholder="Healthcare EHR analysis"></div><div class="field slug-field"><label for="slug">URL slug <span>*</span></label><input id="slug" name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="healthcare-ehr-analysis"><small>Lowercase letters, numbers, and hyphens.</small></div><div class="field"><label for="status">Publishing status</label><select id="status" name="status"><option value="draft">Draft</option><option value="published">Published</option></select></div>
+              <div class="field field-wide"><label for="description">Short description <span>*</span></label><textarea id="description" name="description" rows="3" maxlength="320" required placeholder="A concise summary shown on the public site"></textarea></div>
+              <div class="field tags-field"><label id="tags-label" for="tags">Tags / technologies</label><input id="tags" name="tags" placeholder="SQL, Power BI, Python"><small id="tags-help">Separate tags with commas.</small></div><div class="field project-only"><label for="project-url">Project link</label><input id="project-url" name="project_url" type="url" placeholder="https://github.com/…"></div>
+              <div class="field project-only"><label for="project-label">Link label</label><input id="project-label" name="project_label" maxlength="40" placeholder="View repository"></div><div class="field article-only"><label for="published-date">Publication date</label><input id="published-date" name="published_at" type="date"></div>
+              <div class="field field-wide page-only page-links-field"><label id="page-links-label" for="page-links">Platforms / profile links</label><textarea id="page-links" name="links" rows="5" placeholder="GitHub | https://github.com/…&#10;LinkedIn | https://linkedin.com/in/…&#10;Email | mailto:your.okoromanuel@gmail.com"></textarea><small>One per line in the format Label | URL. Remove a line to remove that link.</small></div>
+              <p id="profile-image-note" class="field page-only" hidden>Update the shared profile picture from the About page entry. It appears on both Home and About.</p><fieldset class="field field-wide image-fields"><legend id="image-legend">Cover image</legend><div class="field-grid"><div class="field field-wide"><label for="image-file">Upload image</label><input id="image-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif"><small id="image-help">JPG, PNG, WebP or AVIF; up to 8 MB. You can also paste an image URL below.</small></div><div class="field field-wide"><label for="image-url">Image URL</label><input id="image-url" name="image_url" type="url" placeholder="https://…"></div><div class="field"><label for="image-title">Image title</label><input id="image-title" name="image_title" maxlength="180" placeholder="Short descriptive title"></div><div class="field"><label for="image-alt">Alternative text</label><input id="image-alt" name="image_alt" maxlength="180" placeholder="Describe the image for screen readers"></div><div class="field field-wide"><label for="image-caption">Image caption / credit</label><input id="image-caption" name="image_caption" maxlength="180" placeholder="Optional credit or caption"></div><div class="field field-wide"><img id="image-preview" class="image-preview" alt="" hidden></div></div></fieldset>
+              <fieldset class="field field-wide gallery-fields"><legend>Additional images</legend><div class="field-grid"><div class="field field-wide"><label for="gallery-file">Upload multiple images</label><input id="gallery-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple><small id="gallery-help">Select as many JPG, PNG, WebP or AVIF images as you need. Each image has its own title, alt text and caption.</small></div><div class="field gallery-url-entry"><label for="gallery-url">Or add an image URL</label><input id="gallery-url" type="url" placeholder="https://…"></div><div class="field gallery-url-action"><span class="sr-only">Add image URL to gallery</span><button id="add-gallery-url" class="secondary-button" type="button">Add URL</button></div><div class="field field-wide"><div id="gallery-list" class="gallery-list" aria-live="polite"></div></div></div></fieldset>
+              <div class="field field-wide content-only"><label id="body-kind-label" for="body-markdown">Project content</label><div class="editor-toolbar"><span>Markdown editor</span><button type="button" id="preview-toggle" aria-expanded="false">Preview</button></div><textarea id="body-markdown" name="body_markdown" class="markdown-input" rows="14" placeholder="# Project overview&#10;&#10;Describe the question, approach, findings and what this work demonstrates. Use Markdown for headings, links, lists and emphasis."></textarea><div id="markdown-preview" class="markdown-preview" hidden></div><small>Use this space for the full project write-up or article. Supports headings, paragraphs, lists, bold, italics, links, quotes and code.</small></div>
+              <label class="check-row field-wide project-only"><input type="checkbox" name="featured"><span>Feature on the home page</span></label>
+            </div>
+            <div class="save-row"><span id="save-meta" class="muted">Changes are not saved yet.</span><div><button id="save-draft" class="secondary-button" type="button">Save draft</button><button class="primary-button" type="submit">Publish</button></div></div>
+          </form>
+        </section>
+      </div>
+    </section>
+  </main>
+  <footer class="admin-footer"><span>Content Studio</span><div><a href="../EDITING-GUIDE.md">Editing guide · including the footer</a> <a href="../CMS-SETUP.md">Setup & security</a></div></footer>
+</body>
+</html>
+

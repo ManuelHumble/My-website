@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#161c1a">
+  <meta name="description" content="Draft insights by Okoro Emmanuel on healthcare data structures, data quality and clinical context.">
+  <title>Blog | Okoro Emmanuel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"><link href="https://api.fontshare.com/v2/css?f[]=zodiak@300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css"><script src="cms-config.js"></script><script src="script.js" defer></script><script type="module" src="cms-public.js"></script>
+</head>
+<body data-cms-page="blog"><a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap"><a class="wordmark" href="index.html" aria-label="Okoro Emmanuel, home">OE<span>.</span></a><nav aria-label="Main navigation"><a href="about.html">About</a><a href="projects.html">Projects</a><a aria-current="page" href="blog.html">Blog</a><a class="nav-contact" href="contact.html">Contact</a></nav></header>
+  <main id="main">
+    <section class="page-hero wrap"><h1 data-cms-page-title>Notes on<br>better data</h1><p data-cms-page-description>Notes and case studies on clinical data structures, reporting and the habits that keep records useful.</p></section>
+    <div class="page-intro wrap markdown-content" data-cms-page-content>Articles on clinical data structures, reporting and practical data quality.</div>
+    <section class="insights chapter-light" aria-label="Published articles"><div class="wrap article-list article-list-page" data-cms-articles>
+      <article><span class="article-status">Draft</span><div><h2><a href="#article-normalize">Normalize healthcare data</a></h2><p>How separating people, visits and diagnoses helps preserve a coherent clinical history.</p></div><a href="#article-normalize" aria-label="Read Normalize healthcare data">↘</a></article>
+      <article><span class="article-status">Draft</span><div><h2><a href="#article-fields">Check fields before the dashboard</a></h2><p>A practical pass through missing values, code consistency and duplicate encounters.</p></div><a href="#article-fields" aria-label="Read Check fields before the dashboard">↘</a></article>
+      <article><span class="article-status">Draft</span><div><h2><a href="#article-context">Clinical context in the model</a></h2><p>Why an analyst should understand what a visit, diagnosis and follow-up mean in practice.</p></div><a href="#article-context" aria-label="Read Clinical context in the model">↘</a></article>
+    </div></section>
+    <section class="article-body wrap" aria-label="Article content" data-cms-article-bodies><article id="article-normalize"><h2>Normalize healthcare data</h2><p>Normalization gives each fact one consistent home. Patient details belong to the patient; symptoms and treatment belong to an encounter; diagnoses and outcomes can then be connected with clear relationships. This structure makes it easier to follow change over time and reduces conflicting copies.</p></article><article id="article-fields"><h2>Check fields before the dashboard</h2><p>Confirm which fields are required, inspect missingness by source and period, standardize codes against the agreed vocabulary, and identify duplicates with a defined key. Preserve an exception list so a clinical owner can resolve ambiguous records.</p></article><article id="article-context"><h2>Clinical context in the model</h2><p>A technically valid field can still be clinically misleading if its meaning is unclear. Document what an encounter represents, when a diagnosis is recorded and how follow-up is captured before translating those fields into measures.</p></article></section>
+  </main>
+  <footer class="site-footer wrap"><a class="footer-name" href="index.html">Okoro Emmanuel</a><div class="credits"><span>Insights on clinical data, reporting and clinical context.</span></div><span>© <span class="year">2026</span> Okoro Emmanuel</span></footer>
+</body></html>
+
