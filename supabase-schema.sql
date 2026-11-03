@@ -46,8 +46,56 @@ create policy "Public can read published content"
 drop policy if exists "Owner can manage portfolio content" on public.portfolio_content;
 create policy "Owner can manage portfolio content"
   on public.portfolio_content for all to authenticated
-  using ((auth.jwt() ->> 'email') = 'your.okoromanuel@gmail.com')
-  with check ((auth.jwt() ->> 'email') = 'your.okoromanuel@gmail.com');
+  using ((auth.jwt() ->> 'email') = 'okoromanuel@gmail.com')
+  with check ((auth.jwt() ->> 'email') = 'okoromanuel@gmail.com');
+
+-- Restrictive policies cap any other permissive policies that might already
+-- exist on this table. PostgreSQL combines permissive policies with OR, so
+-- the owner check must also be enforced with AND.
+drop policy if exists "CMS enforce published-or-owner reads" on public.portfolio_content;
+create policy "CMS enforce published-or-owner reads"
+  on public.portfolio_content as restrictive for select to anon, authenticated
+  using (
+    status = 'published'
+    or (
+      (select auth.role()) = 'authenticated'
+      and (select auth.jwt() ->> 'email') = 'okoromanuel@gmail.com'
+    )
+  );
+
+drop policy if exists "CMS enforce owner inserts" on public.portfolio_content;
+create policy "CMS enforce owner inserts"
+  on public.portfolio_content as restrictive for insert to anon, authenticated
+  with check (
+    (select auth.role()) = 'authenticated'
+    and (select auth.jwt() ->> 'email') = 'okoromanuel@gmail.com'
+  );
+
+drop policy if exists "CMS enforce owner updates" on public.portfolio_content;
+create policy "CMS enforce owner updates"
+  on public.portfolio_content as restrictive for update to anon, authenticated
+  using (
+    (select auth.role()) = 'authenticated'
+    and (select auth.jwt() ->> 'email') = 'okoromanuel@gmail.com'
+  )
+  with check (
+    (select auth.role()) = 'authenticated'
+    and (select auth.jwt() ->> 'email') = 'okoromanuel@gmail.com'
+  );
+
+drop policy if exists "CMS enforce owner deletes" on public.portfolio_content;
+create policy "CMS enforce owner deletes"
+  on public.portfolio_content as restrictive for delete to anon, authenticated
+  using (
+    (select auth.role()) = 'authenticated'
+    and (select auth.jwt() ->> 'email') = 'okoromanuel@gmail.com'
+  );
+
+-- The public website only needs SELECT; the signed-in CMS needs CRUD.
+-- This removes broad table grants such as TRUNCATE that RLS does not cover.
+revoke all on table public.portfolio_content from public, anon, authenticated;
+grant select on table public.portfolio_content to anon, authenticated;
+grant insert, update, delete on table public.portfolio_content to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('portfolio-images', 'portfolio-images', true, 8388608,
@@ -63,18 +111,52 @@ drop policy if exists "Owner can add portfolio images" on storage.objects;
 create policy "Owner can add portfolio images"
   on storage.objects for insert to authenticated
   with check (bucket_id = 'portfolio-images'
-    and (auth.jwt() ->> 'email') = 'your.okoromanuel@gmail.com');
+    and (auth.jwt() ->> 'email') = 'okoromanuel@gmail.com');
 
 drop policy if exists "Owner can update portfolio images" on storage.objects;
 create policy "Owner can update portfolio images"
   on storage.objects for update to authenticated
   using (bucket_id = 'portfolio-images'
-    and (auth.jwt() ->> 'email') = 'your.okoromanuel@gmail.com')
+    and (auth.jwt() ->> 'email') = 'okoromanuel@gmail.com')
   with check (bucket_id = 'portfolio-images'
-    and (auth.jwt() ->> 'email') = 'your.okoromanuel@gmail.com');
+    and (auth.jwt() ->> 'email') = 'okoromanuel@gmail.com');
 
 drop policy if exists "Owner can delete portfolio images" on storage.objects;
 create policy "Owner can delete portfolio images"
   on storage.objects for delete to authenticated
   using (bucket_id = 'portfolio-images'
-    and (auth.jwt() ->> 'email') = 'your.okoromanuel@gmail.com');
+    and (auth.jwt() ->> 'email') = 'okoromanuel@gmail.com');
+
+-- These restrictive policies protect the CMS bucket even if another
+-- permissive storage policy is added later. Other buckets are unaffected.
+drop policy if exists "CMS enforce portfolio image inserts" on storage.objects;
+create policy "CMS enforce portfolio image inserts"
+  on storage.objects as restrictive for insert to public
+  with check (
+    bucket_id <> 'portfolio-images'
+    or ((select auth.role()) = 'authenticated'
+      and (select auth.jwt() ->> 'email') = 'okoromanuel@gmail.com')
+  );
+
+drop policy if exists "CMS enforce portfolio image updates" on storage.objects;
+create policy "CMS enforce portfolio image updates"
+  on storage.objects as restrictive for update to public
+  using (
+    bucket_id <> 'portfolio-images'
+    or ((select auth.role()) = 'authenticated'
+      and (select auth.jwt() ->> 'email') = 'okoromanuel@gmail.com')
+  )
+  with check (
+    bucket_id <> 'portfolio-images'
+    or ((select auth.role()) = 'authenticated'
+      and (select auth.jwt() ->> 'email') = 'okoromanuel@gmail.com')
+  );
+
+drop policy if exists "CMS enforce portfolio image deletes" on storage.objects;
+create policy "CMS enforce portfolio image deletes"
+  on storage.objects as restrictive for delete to public
+  using (
+    bucket_id <> 'portfolio-images'
+    or ((select auth.role()) = 'authenticated'
+      and (select auth.jwt() ->> 'email') = 'okoromanuel@gmail.com')
+  );

@@ -1,8 +1,10 @@
 import { initialContent } from './content-seed.js';
 
 const config = window.CMS_CONFIG || {};
+const ADMIN_EMAIL = 'okoromanuel@gmail.com';
 const setup = document.querySelector('#setup-screen');
 const login = document.querySelector('#login-screen');
+const recovery = document.querySelector('#password-recovery-screen');
 const app = document.querySelector('#editor-app');
 const logoutButton = document.querySelector('#logout');
 const notice = document.querySelector('#notice');
@@ -33,8 +35,9 @@ function setNotice(message, error = false) {
 function setScreen(which) {
   setup.hidden = which !== 'setup';
   login.hidden = which !== 'login';
+  recovery.hidden = which !== 'recovery';
   app.hidden = which !== 'app';
-  logoutButton.hidden = which !== 'app' || mode === 'local';
+  logoutButton.hidden = which !== 'app';
   document.querySelector('.heading-actions').hidden = which !== 'app';
 }
 function escapeHtml(value) {
@@ -187,18 +190,56 @@ function renderGalleryList() {
   });
 }
 function slugify(value) { return value.normalize('NFKD').toLowerCase().replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
+function normalizeTags(value) {
+  if (Array.isArray(value)) return value.filter(tag => typeof tag === 'string').map(tag => tag.trim()).filter(Boolean);
+  if (typeof value === 'string') return value.split(',').map(tag => tag.trim()).filter(Boolean);
+  return [];
+}
+function normalizeLinks(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(link => link && typeof link === 'object')
+    .map(link => ({...link,label:String(link.label ?? '').trim(),url:String(link.url ?? '').trim()}))
+    .filter(link => link.label && link.url);
+}
+function normalizeGalleryImages(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(image => image && typeof image === 'object')
+    .map(image => ({...image,url:String(image.url ?? '').trim(),title:String(image.title ?? '').trim(),alt:String(image.alt ?? '').trim(),caption:String(image.caption ?? '').trim()}))
+    .filter(image => image.url);
+}
+function normalizeContentRecord(item) {
+  return {
+    ...item,
+    description: String(item.description ?? ''),
+    body_markdown: String(item.body_markdown ?? ''),
+    image_url: String(item.image_url ?? ''),
+    image_title: String(item.image_title ?? ''),
+    image_alt: String(item.image_alt ?? ''),
+    image_caption: String(item.image_caption ?? ''),
+    gallery_images: normalizeGalleryImages(item.gallery_images),
+    links: normalizeLinks(item.links),
+    tags: normalizeTags(item.tags),
+    project_url: String(item.project_url ?? ''),
+    project_label: String(item.project_label ?? ''),
+    featured: Boolean(item.featured),
+    status: item.status === 'published' ? 'published' : 'draft',
+    published_at: item.published_at ?? null,
+  };
+}
 async function importExisting() {
   if (!confirm('Import the current site examples as editable content? Existing database items will be kept.')) return;
   setNotice('Importing the current examples…');
   if (mode === 'local') {
-    items = [...items, ...initialContent.filter(seed => !items.some(item => item.slug === seed.slug)).map(seed => ({...seed,id:`local-${crypto.randomUUID()}`,updated_at:new Date().toISOString()}))];
+    items = [...items, ...initialContent.filter(seed => !items.some(item => item.slug === seed.slug)).map(seed => ({...normalizeContentRecord(seed),id:`local-${crypto.randomUUID()}`,updated_at:new Date().toISOString()}))];
     localStorage.setItem(storageKey, JSON.stringify(items));
     setNotice('Starter content restored in this browser. Export a backup to move it into the live CMS.'); renderList(); return;
   }
   const { data: existing, error: readError } = await client.from('portfolio_content').select('slug');
   if (readError) { setNotice(`Import failed: ${readError.message}`, true); return; }
   const slugs = new Set((existing || []).map(item => item.slug));
-  const missing = initialContent.filter(item => !slugs.has(item.slug));
+  const missing = initialContent.filter(item => !slugs.has(item.slug)).map(normalizeContentRecord);
   if (missing.length) {
     const { error } = await client.from('portfolio_content').insert(missing);
     if (error) { setNotice(`Import failed: ${error.message}`, true); return; }
@@ -211,13 +252,13 @@ async function restorePages() {
     const removed = new Set(JSON.parse(localStorage.getItem(removedPagesKey) || '[]'));
     pageSeeds.forEach(page => removed.delete(page.slug));
     localStorage.setItem(removedPagesKey,JSON.stringify([...removed]));
-    items = [...items,...pageSeeds.filter(seed=>!items.some(item=>item.slug===seed.slug)).map(seed=>({...seed,id:`local-${crypto.randomUUID()}`,updated_at:new Date().toISOString()}))];
+    items = [...items,...pageSeeds.filter(seed=>!items.some(item=>item.slug===seed.slug)).map(seed=>({...normalizeContentRecord(seed),id:`local-${crypto.randomUUID()}`,updated_at:new Date().toISOString()}))];
     localStorage.setItem(storageKey,JSON.stringify(items));setNotice('Default page entries restored in this browser.');renderList();return;
   }
   const {data:existing,error:readError}=await client.from('portfolio_content').select('slug').eq('kind','page');
   if(readError){setNotice(`Could not restore pages: ${readError.message}`,true);return;}
   const slugs=new Set((existing||[]).map(item=>item.slug));
-  const missing=pageSeeds.filter(page=>!slugs.has(page.slug));
+  const missing=pageSeeds.filter(page=>!slugs.has(page.slug)).map(normalizeContentRecord);
   if(missing.length){const {error}=await client.from('portfolio_content').insert(missing);if(error){setNotice(`Could not restore pages: ${error.message}`,true);return;}}
   setNotice('Default page entries restored.');await loadItems();
 }
@@ -226,11 +267,11 @@ async function loadItems() {
   if (mode === 'local') {
     const stored = localStorage.getItem(storageKey);
     if (stored) {
-      try { items = JSON.parse(stored); }
+      try { items = JSON.parse(stored).map(normalizeContentRecord); }
       catch { items = []; setNotice('Saved browser content could not be read. Import a JSON backup or clear this browser’s CMS data.',true); }
     const removedPages = JSON.parse(localStorage.getItem(removedPagesKey) || '[]');
     const missing = initialContent.filter(seed => !items.some(item => item.slug === seed.slug) && !(seed.kind === 'page' && removedPages.includes(seed.slug)));
-      if (missing.length) items.push(...missing.map(seed=>({...seed,id:`local-${crypto.randomUUID()}`,updated_at:new Date().toISOString()})));
+      if (missing.length) items.push(...missing.map(seed=>({...normalizeContentRecord(seed),id:`local-${crypto.randomUUID()}`,updated_at:new Date().toISOString()})));
       let updated = missing.length > 0;
       for (const seed of initialContent.filter(item=>item.kind==='page'&&item.body_markdown)) {
         const existing = items.find(item=>item.slug===seed.slug);
@@ -238,7 +279,7 @@ async function loadItems() {
       }
       if (updated) localStorage.setItem(storageKey,JSON.stringify(items));
     } else {
-      items = initialContent.map(seed=>({...seed,id:`local-${crypto.randomUUID()}`,updated_at:new Date().toISOString()}));
+      items = initialContent.map(seed=>({...normalizeContentRecord(seed),id:`local-${crypto.randomUUID()}`,updated_at:new Date().toISOString()}));
       localStorage.setItem(storageKey,JSON.stringify(items));
     }
     renderList();
@@ -378,7 +419,7 @@ function initEvents() {
   document.querySelector('#backup-file').addEventListener('change',async event=>{
     const file=event.currentTarget.files[0];if(!file)return;
     try{const parsed=JSON.parse(await file.text());if(!Array.isArray(parsed)||parsed.some(item=>!item.title||!item.slug||!['project','article','page'].includes(item.kind)))throw new Error('This file is not a portfolio content backup.');
-      const records=parsed.map(({id,...item})=>({...item,id:mode==='local'?(id||`local-${crypto.randomUUID()}`):(id&&!String(id).startsWith('local-')?id:crypto.randomUUID())}));
+      const records=parsed.map(({id,...item})=>({...normalizeContentRecord(item),id:mode==='local'?(id||`local-${crypto.randomUUID()}`):(id&&!String(id).startsWith('local-')?id:crypto.randomUUID())}));
       if(mode==='local'){items=records;localStorage.setItem(storageKey,JSON.stringify(items));setNotice('Backup imported to this browser.');renderList();}
       else{const {error}=await client.from('portfolio_content').upsert(records,{onConflict:'slug'});if(error)throw error;setNotice('Backup imported to the live content store.');await loadItems();}
     }catch(error){setNotice(`Could not import backup: ${error.message}`,true);}finally{event.currentTarget.value='';}
@@ -413,29 +454,87 @@ function initEvents() {
   });
   for (const control of form.querySelectorAll('input,textarea,select')) control.addEventListener('input', () => { dirty = true; });
   form.addEventListener('change', () => { if (fields('status').value === 'published') form.querySelector('[type="submit"]').textContent = 'Save changes'; });
-  logoutButton.addEventListener('click', async () => { await client.auth.signOut(); location.reload(); });
-  document.querySelector('#login-form').addEventListener('submit', async event => {
-    event.preventDefault(); const email=document.querySelector('#login-email').value.trim();
-    const message=document.querySelector('#login-message'); message.textContent='Sending secure sign-in link…';
-    const {error}=await client.auth.signInWithOtp({email,options:{emailRedirectTo:location.href,shouldCreateUser:false}});
-    message.textContent=error?`Could not send sign-in link: ${error.message}`:'Check your inbox for the sign-in link.';
+  logoutButton.addEventListener('click', async () => {
+    logoutButton.disabled = true;
+    const {error} = await client.auth.signOut();
+    if (error) { setNotice(`Could not sign out: ${error.message}`, true); logoutButton.disabled = false; return; }
+    location.reload();
   });
+  document.querySelector('#login-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const email=document.querySelector('#login-email').value.trim().toLowerCase();
+    const password=document.querySelector('#login-password').value;
+    const message=document.querySelector('#login-message');
+    if (email !== ADMIN_EMAIL) { message.textContent=`Only ${ADMIN_EMAIL} is authorized to use this Content Studio.`; return; }
+    const submit=event.currentTarget.querySelector('[type="submit"]'); submit.disabled=true; message.textContent='Signing in…';
+    try {
+      const {data,error}=await client.auth.signInWithPassword({email,password});
+      if(error){message.textContent=authMessage(error);return;}
+      if(!isAdmin(data.user)){await client.auth.signOut();message.textContent=`Only ${ADMIN_EMAIL} is authorized to use this Content Studio.`;return;}
+      document.querySelector('#login-password').value='';setScreen('app');await loadItems();
+    } catch(error) { message.textContent=authMessage(error); }
+    finally { submit.disabled=false; }
+  });
+  document.querySelector('#forgot-password').addEventListener('click', async event => {
+    const email=document.querySelector('#login-email').value.trim().toLowerCase();
+    const message=document.querySelector('#login-message');
+    if(email!==ADMIN_EMAIL){message.textContent=`Enter the administrator email (${ADMIN_EMAIL}) to request a reset.`;return;}
+    const button=event.currentTarget;button.disabled=true;message.textContent='Requesting a password reset…';
+    try {
+      const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:location.href.split('#')[0]});
+      message.textContent=error?authMessage(error):'If an account exists for this address, Supabase will email a password-reset link. Check your inbox and spam folder.';
+    } catch(error) { message.textContent=authMessage(error); }
+    finally { button.disabled=false; }
+  });
+  document.querySelector('#password-recovery-form').addEventListener('submit', async event => {
+    event.preventDefault();const message=document.querySelector('#recovery-message');
+    const password=document.querySelector('#new-password').value,confirmation=document.querySelector('#confirm-password').value;
+    if(password.length<10){message.textContent='Use at least 10 characters for the new password.';return;}
+    if(password!==confirmation){message.textContent='The passwords do not match.';return;}
+    const button=event.currentTarget.querySelector('[type="submit"]');button.disabled=true;message.textContent='Updating password…';
+    try {
+      const {data:{user},error:userError}=await client.auth.getUser();
+      if(userError||!isAdmin(user)){await client.auth.signOut();setScreen('login');document.querySelector('#login-message').textContent=`Only ${ADMIN_EMAIL} can reset this Content Studio password.`;return;}
+      const {error}=await client.auth.updateUser({password});
+      if(error){message.textContent=authMessage(error);return;}
+      event.currentTarget.reset();setScreen('app');setNotice('Password updated. You are signed in.');await loadItems();
+    } catch(error) { message.textContent=authMessage(error); }
+    finally { button.disabled=false; }
+  });
+}
+function isAdmin(user) { return user?.email?.toLowerCase()===ADMIN_EMAIL; }
+function authMessage(error) {
+  const message=String(error?.message||'Authentication failed.');
+  if(/invalid login credentials/i.test(message))return 'Email or password is incorrect. If you have not set a password yet, use “Forgot password?”.';
+  if(/email not confirmed/i.test(message))return 'Confirm the administrator email in Supabase Auth before signing in.';
+  if(/network|fetch/i.test(message))return 'Could not reach Supabase. Check your connection and project URL, then try again.';
+  return message;
 }
 async function boot() {
   initEvents();
   if (!config.supabaseUrl || !config.supabaseAnonKey) {
-    mode='local';setScreen('app');
-    const banner=document.querySelector('#mode-banner');banner.hidden=false;banner.innerHTML='Local browser mode · changes stay on this device. Connect Supabase and deploy the site to publish for all visitors. <a href="../CMS-SETUP.md">Setup guide</a>';
-    imageFile.disabled=true;document.querySelector('#image-help').textContent='Image uploads activate after the cloud content store is connected. Use a public image URL in local preview.';
-    galleryFile.disabled=true;document.querySelector('#gallery-help').textContent='Multi-image uploads activate after the cloud content store is connected. You can add multiple public image URLs below in local preview.';
-    await loadItems();return;
+    mode='setup';setScreen('setup');return;
   }
   const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-  client=createClient(config.supabaseUrl,config.supabaseAnonKey,{auth:{flowType:'pkce',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-  const {data:{session}}=await client.auth.getSession();
+  client=createClient(config.supabaseUrl,config.supabaseAnonKey,{auth:{flowType:'pkce',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}});
+  client.auth.onAuthStateChange((event,session)=>{
+    if(event==='PASSWORD_RECOVERY') {
+      if(isAdmin(session?.user))setScreen('recovery');
+      else {setScreen('login');document.querySelector('#login-message').textContent=`Only ${ADMIN_EMAIL} is authorized to use this Content Studio.`;queueMicrotask(()=>client.auth.signOut());}
+    }
+    if(event==='SIGNED_OUT')setScreen('login');
+  });
+  const {data:{session},error:sessionError}=await client.auth.getSession();
+  if(sessionError)throw sessionError;
+  if(location.hash.includes('type=recovery')&&session){
+    const {data:{user},error}=await client.auth.getUser();
+    if(!error&&isAdmin(user)){setScreen('recovery');return;}
+    await client.auth.signOut();setScreen('login');document.querySelector('#login-message').textContent=`Only ${ADMIN_EMAIL} is authorized to use this Content Studio.`;return;
+  }
   if (!session) { setScreen('login'); return; }
-  if (session.user.email?.toLowerCase() !== 'your.okoromanuel@gmail.com') { await client.auth.signOut(); setScreen('login'); document.querySelector('#login-message').textContent='This email is not authorized for this content studio.'; return; }
+  const {data:{user},error:userError}=await client.auth.getUser();
+  if(userError)throw userError;
+  if (!isAdmin(user)) { await client.auth.signOut(); setScreen('login'); document.querySelector('#login-message').textContent=`Only ${ADMIN_EMAIL} is authorized to use this Content Studio.`; return; }
   setScreen('app'); await loadItems();
-  client.auth.onAuthStateChange((_event,nextSession)=>{if(!nextSession)setScreen('login');});
 }
-boot().catch(error=>{setScreen('login');document.querySelector('#login-message').textContent=`Could not start the editor: ${error.message}`;});
+boot().catch(error=>{setScreen(config.supabaseUrl&&config.supabaseAnonKey?'login':'setup');document.querySelector('#login-message').textContent=`Could not start the editor: ${authMessage(error)}`;});

@@ -33,7 +33,7 @@ document.querySelector("#contact-form")?.addEventListener("submit", event => {
   const subject = encodeURIComponent(`Portfolio enquiry from ${form.get("name")}`);
   const body = encodeURIComponent(`Name: ${form.get("name")}\nEmail: ${form.get("email")}\n\n${form.get("message")}`);
   document.querySelector("#form-note").textContent = "Your email draft is ready in your default mail app.";
-  window.location.href = `mailto:your.okoromanuel@gmail.com?subject=${subject}&body=${body}`;
+  window.location.href = `mailto:okoromanuel@gmail.com?subject=${subject}&body=${body}`;
 });
 
 document.querySelectorAll(".year").forEach(year => { year.textContent = new Date().getFullYear(); });
