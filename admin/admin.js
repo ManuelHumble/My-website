@@ -1,4 +1,5 @@
 import { initialContent } from './content-seed.js';
+import { contentToHtml, sanitizeHtml, textContent } from '../content-sanitize.js';
 
 const config = window.CMS_CONFIG || {};
 const ADMIN_EMAIL = 'okoromanuel@gmail.com';
@@ -12,7 +13,8 @@ const list = document.querySelector('#content-list');
 const form = document.querySelector('#content-form');
 const emptyEditor = document.querySelector('#empty-editor');
 const preview = document.querySelector('#markdown-preview');
-const markdownInput = document.querySelector('#body-markdown');
+const richEditor = document.querySelector('#rich-editor');
+const bodyField = document.querySelector('#body-markdown');
 const imagePreview = document.querySelector('#image-preview');
 const imageFile = document.querySelector('#image-file');
 const galleryFile = document.querySelector('#gallery-file');
@@ -51,33 +53,51 @@ function safeImageLink(value) {
   try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) ? url.href : ''; }
   catch { return ''; }
 }
-function inlineMarkdown(text) {
-  let s = escapeHtml(text);
-  s = s.replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => `<a href="${escapeHtml(safeLink(url))}" target="_blank" rel="noreferrer">${label}</a>`);
-  return s;
+let savedEditorRange = null;
+function rememberEditorSelection() {
+  const selection = window.getSelection();
+  if (!selection?.rangeCount || !richEditor.contains(selection.anchorNode)) return;
+  savedEditorRange = selection.getRangeAt(0).cloneRange();
 }
-function renderMarkdown(raw) {
-  const lines = String(raw || '').replace(/\r/g, '').split(String.fromCharCode(10));
-  const out = [];
-  let listType = '';
-  const closeList = () => { if (listType) out.push(`</${listType}>`); listType = ''; };
-  for (const line of lines) {
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    const bullet = line.match(/^\s*[-*]\s+(.+)$/);
-    const number = line.match(/^\s*\d+\.\s+(.+)$/);
-    if (heading) { closeList(); const n = heading[1].length; out.push(`<h${n}>${inlineMarkdown(heading[2])}</h${n}>`); }
-    else if (bullet || number) { const next = bullet ? 'ul' : 'ol'; if (listType !== next) { closeList(); listType = next; out.push(`<${listType}>`); } out.push(`<li>${inlineMarkdown((bullet || number)[1])}</li>`); }
-    else if (/^>\s?/.test(line)) { closeList(); out.push(`<blockquote>${inlineMarkdown(line.replace(/^>\s?/, ''))}</blockquote>`); }
-    else if (line.trim()) { closeList(); out.push(`<p>${inlineMarkdown(line)}</p>`); }
-    else closeList();
+function restoreEditorSelection() {
+  richEditor.focus();
+  if (!savedEditorRange) return;
+  const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(savedEditorRange);
+}
+function syncBodyField() {
+  bodyField.value = sanitizeHtml(richEditor.innerHTML);
+  return bodyField.value;
+}
+function setRichEditorContent(raw) {
+  richEditor.innerHTML = contentToHtml(raw);
+  syncBodyField();
+}
+function showContentPreview() { preview.innerHTML = contentToHtml(bodyField.value || richEditor.innerHTML); }
+function runEditorCommand(command, value = null) {
+  restoreEditorSelection();
+  if (command === 'createLink') {
+    const selected = window.getSelection()?.toString().trim();
+    if (!selected) { setNotice('Select the text you want to link first.', true); return; }
+    const input = window.prompt('Enter a URL (https:// or mailto:):');
+    if (!input) return;
+    const url = safeLink(input.trim());
+    if (!url) { setNotice('Use a valid https:// or mailto: link.', true); return; }
+    document.execCommand('createLink', false, url);
+  } else if (command === 'fontSize') {
+    document.execCommand('styleWithCSS', false, false);
+    document.execCommand('fontSize', false, '7');
+    richEditor.querySelectorAll('font[size="7"]').forEach(font => { font.removeAttribute('size'); font.style.fontSize = value; });
+  } else if (command === 'fontName') {
+    document.execCommand('styleWithCSS', false, false);
+    document.execCommand('fontName', false, value);
+  } else if (command === 'formatBlock') {
+    document.execCommand('formatBlock', false, `<${value}>`);
+  } else {
+    document.execCommand(command, false, value);
   }
-  closeList();
-  return out.join('');
+  syncBodyField(); dirty = true; rememberEditorSelection();
+  if (!preview.hidden) showContentPreview();
 }
-function showMarkdown() { preview.innerHTML = renderMarkdown(markdownInput.value); }
 function isArticle() { return activeKind === 'article'; }
 function isPage() { return activeKind === 'page'; }
 function revealKindFields() {
@@ -100,11 +120,8 @@ function revealKindFields() {
   document.querySelector('#tags-help').textContent = isPage() ? 'On About, these appear as the editable competency list.' : 'Separate tags with commas.';
   document.querySelector('#image-legend').textContent = isPage() ? 'Page / profile image' : 'Cover image';
   document.querySelector('#body-kind-label').textContent = isPage() ? 'Page content' : isArticle() ? 'Article content' : 'Project content';
-  markdownInput.placeholder = isArticle()
-    ? '# Article title\n\nWrite the article here. Use Markdown for headings, links, lists and emphasis.'
-    : isPage() ? 'Write the main text shown on this page. On About, this is your biography.'
-      : '# Project overview\n\nDescribe the question, approach, findings and what this work demonstrates.';
-  document.querySelector('#body-markdown').required = isArticle();
+  richEditor.setAttribute('aria-label', isArticle() ? 'Article content' : isPage() ? 'Page content' : 'Project content');
+  richEditor.setAttribute('aria-required', String(isArticle()));
   document.querySelector('#save-draft').hidden = false;
   form.querySelector('[type="submit"]').textContent = fields('status').value === 'published' ? 'Save changes' : 'Publish';
 }
@@ -149,7 +166,7 @@ function openItem(item) {
   imageFile.value = '';
   galleryFile.value = '';
   galleryDraft = (item.gallery_images || []).map(image => ({...image,key:crypto.randomUUID()}));
-  updateImagePreview(); renderGalleryList(); showMarkdown(); revealKindFields(); renderList(); dirty = false;
+  updateImagePreview(); renderGalleryList(); setRichEditorContent(item.body_markdown || ''); showContentPreview(); revealKindFields(); renderList(); dirty = false;
 }
 function newItem() {
   galleryDraft.forEach(image=>{if(image.previewUrl)URL.revokeObjectURL(image.previewUrl);});
@@ -159,7 +176,7 @@ function newItem() {
   fields('status').value = 'draft';
   imageFile.value = ''; galleryFile.value = ''; galleryDraft = []; renderGalleryList(); imagePreview.hidden = true;
   document.querySelector('#save-meta').textContent = 'New content · not saved yet.';
-  revealKindFields(); preview.hidden = true; markdownInput.hidden = false; document.querySelector('#preview-toggle').textContent = 'Preview';
+  revealKindFields(); setRichEditorContent(''); preview.hidden = true; richEditor.hidden = false; document.querySelector('#preview-toggle').textContent = 'Preview';
   renderList(); fields('title').focus(); dirty = false;
 }
 function updateImagePreview() {
@@ -351,8 +368,10 @@ async function persist(status) {
     const split=line.split('|');const label=(split.shift()||'').trim();const url=split.join('|').trim();return {label,url:safeLink(url)};
   });
   if(isPage()&&links.some(link=>!link.label||!link.url)){setNotice('Check platform links. Use one “Label | URL” pair per line and a valid http, https, or mailto URL.',true);fields('links').focus();return;}
+  const bodyHtml = syncBodyField();
+  if (isArticle() && !textContent(bodyHtml)) { setNotice('Add article content before publishing.', true); richEditor.focus(); return; }
   const record = {
-    kind:activeKind,title,slug,description:fields('description').value.trim(),body_markdown:fields('body_markdown').value,
+    kind:activeKind,title,slug,description:fields('description').value.trim(),body_markdown:bodyHtml,
     image_url:imageUrl,image_title:fields('image_title').value.trim(),image_alt:fields('image_alt').value.trim(),image_caption:fields('image_caption').value.trim(),gallery_images:galleryImages,
     tags:fields('tags').value.split(',').map(s=>s.trim()).filter(Boolean),links:isPage()?links:[],project_url:fields('project_url').value.trim(),
     project_label:fields('project_label').value.trim() || 'View project',featured:activeKind==='project' && fields('featured').checked,status,
@@ -432,10 +451,27 @@ function initEvents() {
   fields('image_url').addEventListener('input', updateImagePreview);
   fields('image_alt').addEventListener('input', updateImagePreview);
   imageFile.addEventListener('change', () => { const file=imageFile.files[0]; if(file){ imagePreview.src=URL.createObjectURL(file); imagePreview.alt=fields('image_alt').value||'Selected image preview'; imagePreview.hidden=false; } });
-  markdownInput.addEventListener('input', () => { dirty = true; if (!preview.hidden) showMarkdown(); });
+  richEditor.addEventListener('input', () => { syncBodyField(); dirty = true; if (!preview.hidden) showContentPreview(); });
+  richEditor.addEventListener('mouseup', rememberEditorSelection);
+  richEditor.addEventListener('keyup', rememberEditorSelection);
+  richEditor.addEventListener('paste', event => {
+    event.preventDefault();
+    const html = event.clipboardData.getData('text/html');
+    const text = event.clipboardData.getData('text/plain');
+    const safe = html ? sanitizeHtml(html) : escapeHtml(text).replace(/\r?\n/g, '<br>');
+    document.execCommand('insertHTML', false, safe);
+    syncBodyField(); dirty = true; rememberEditorSelection();
+  });
+  document.querySelectorAll('#editor-toolbar [data-command]').forEach(button => {
+    button.addEventListener('mousedown', event => event.preventDefault());
+    button.addEventListener('click', () => runEditorCommand(button.dataset.command));
+  });
+  document.querySelector('#font-family').addEventListener('change', event => runEditorCommand('fontName', event.currentTarget.value));
+  document.querySelector('#font-size').addEventListener('change', event => runEditorCommand('fontSize', event.currentTarget.value));
+  document.querySelector('#block-format').addEventListener('change', event => runEditorCommand('formatBlock', event.currentTarget.value));
   document.querySelector('#preview-toggle').addEventListener('click', event => {
-    const willShow = preview.hidden; if (willShow) showMarkdown(); preview.hidden = !willShow; markdownInput.hidden = willShow;
-    event.currentTarget.textContent = willShow ? 'Edit Markdown' : 'Preview'; event.currentTarget.setAttribute('aria-expanded',String(willShow));
+    const willShow = preview.hidden; syncBodyField(); if (willShow) showContentPreview(); preview.hidden = !willShow; richEditor.hidden = willShow;
+    event.currentTarget.textContent = willShow ? 'Edit content' : 'Preview'; event.currentTarget.setAttribute('aria-expanded',String(willShow));
   });
   galleryFile.addEventListener('change',()=>{
     const files=[...galleryFile.files];

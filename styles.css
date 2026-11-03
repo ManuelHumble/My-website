@@ -99,3 +99,7 @@ figure figcaption{font-size:13px}
 .about-profile h2{max-width:420px}.about-portrait{height:clamp(300px,38vw,460px);max-width:390px;margin:24px 0 0;background:#27322e;position:relative;overflow:hidden}.about-portrait img{object-position:center 24%;filter:saturate(.82)}.about-portrait figcaption{position:absolute;left:14px;bottom:14px;background:rgba(22,28,26,.84);color:#f0f1ea;padding:8px 12px}.about-copy .markdown-content{margin-bottom:24px}.about-contact{margin-top:8px}.about-platforms{display:flex;flex-wrap:wrap;gap:14px 28px;padding-top:28px;padding-bottom:38px}.about-platforms a{text-decoration:underline;text-underline-offset:4px;color:#243c31}.page-intro{padding-bottom:36px;color:#cbd1ca}.contact-copy .markdown-content{color:#c7cec7;margin:16px 0}
 
 .section-heading .page-summary{max-width:360px;margin:0 0 8px;color:#c2c9c2}.page-intro{max-width:900px;margin-inline:auto}.page-intro p{max-width:68ch}
+
+/* CMS-uploaded media keeps its source colours. Archival reference imagery above retains its deliberate treatment. */
+img[data-cms-page-image],.project-image img,.content-gallery img,.profile-portrait img,.about-portrait img{filter:none}
+.contact-trap{position:absolute;left:-10000px;clip:rect(0 0 0 0);clip-path:inset(50%);overflow:hidden;white-space:nowrap}

@@ -14,7 +14,7 @@ Removing a page entry clears its CMS override and restores the built-in page. It
 
 ## Projects and articles
 
-Choose **Projects** or **Articles**, then select an item or create new content. Set its title, summary, slug, tags, image and image descriptions; use the Markdown editor for the full case study or article. **Save draft** keeps it out of the public listing. Choose **Publish** to make it live through Supabase without a new site deployment. Change the status back to **Draft** to unpublish, or use **Delete** after reviewing the confirmation. Project content can include a repository URL and multiple gallery images with captions and alternative text.
+Choose **Projects** or **Articles**, then select an item or create new content. Set its title, summary, slug, tags, image and image descriptions; use the rich-text editor for the full case study or article. It supports fonts, sizes, headings, bold, italic, underline, lists, alignment, links, undo and redo. **Save draft** keeps it out of the public listing. Choose **Publish** to make it live through Supabase without a new site deployment. Change the status back to **Draft** to unpublish, or use **Delete** after reviewing the confirmation. Project content can include a repository URL and multiple gallery images with captions and alternative text. Existing Markdown content remains readable when you open it.
 
 ## Access and troubleshooting
 

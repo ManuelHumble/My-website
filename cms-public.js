@@ -1,3 +1,5 @@
+import { contentToHtml } from './content-sanitize.js';
+
 (async function () {
   var config = window.CMS_CONFIG || {};
   var targets = {
@@ -22,39 +24,7 @@
     try { var url = new URL(value); return ["http:","https:"].includes(url.protocol) ? url.href : ""; }
     catch (_) { return ""; }
   }
-  function markdown(raw) {
-    var out = [], list = "";
-    function closeList() { if (list) out.push("</" + list + ">"); list = ""; }
-    function inline(value) {
-      return esc(value)
-        .replace(/\x60([^\x60]+)\x60/g, "<code>$1</code>")
-        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function (_m, label, url) {
-          return '<a href="' + esc(safeUrl(url)) + '" target="_blank" rel="noreferrer">' + label + "</a>";
-        });
-    }
-    String(raw || "").replace(/\r/g, "").split("\n").forEach(function (line) {
-      var heading = line.match(/^(#{1,3})\s+(.+)$/);
-      var bullet = line.match(/^\s*[-*]\s+(.+)$/);
-      var number = line.match(/^\s*\d+\.\s+(.+)$/);
-      if (heading) {
-        closeList();
-        var n = heading[1].length;
-        out.push("<h" + n + ">" + inline(heading[2]) + "</h" + n + ">");
-      } else if (bullet || number) {
-        var next = bullet ? "ul" : "ol";
-        if (list !== next) { closeList(); list = next; out.push("<" + list + ">"); }
-        out.push("<li>" + inline((bullet || number)[1]) + "</li>");
-      } else if (/^>\s?/.test(line)) {
-        closeList(); out.push("<blockquote>" + inline(line.replace(/^>\s?/, "")) + "</blockquote>");
-      } else if (line.trim()) {
-        closeList(); out.push("<p>" + inline(line) + "</p>");
-      } else closeList();
-    });
-    closeList();
-    return out.join("");
-  }
+  function contentHtml(raw) { return contentToHtml(raw); }
   function tagsMarkup(tags) {
     tags = Array.isArray(tags) ? tags : [];
     return tags.length ? '<div class="tags">' + tags.map(function (tag) { return "<span>" + esc(tag) + "</span>"; }).join("") + "</div>" : "";
@@ -84,7 +54,7 @@
     if (!image) image = '<a class="project-art-link" href="' + esc(imageHref) + '" aria-label="' + esc(imageLabel) + '"><div class="project-art project-art-a" aria-hidden="true"><span>Clinical</span><b>' + esc(item.title) + '</b><span>Data</span><i></i></div></a>';
     var content = hasContent
       ? '<div class="project-case-study" id="' + esc(contentId) + '">' +
-        (item.body_markdown ? '<div class="markdown-content">' + markdown(item.body_markdown) + "</div>" : "") +
+        (item.body_markdown ? '<div class="markdown-content">' + contentHtml(item.body_markdown) + "</div>" : "") +
         galleryMarkup(item.gallery_images, imageHref, imageLabel) + "</div>"
       : "";
     var repo = safeUrl(item.project_url)
@@ -109,7 +79,7 @@
     var target = "blog.html#" + anchor;
     var label = "Read article: " + item.title;
     return '<article id="' + esc(anchor) + '">' + imageMarkup(item, target, label) + "<h2>" + esc(item.title) + '</h2><p class="article-date">' +
-      esc(dateLabel(item.published_at)) + '</p><div class="markdown-content">' + markdown(item.body_markdown) + "</div>" +
+      esc(dateLabel(item.published_at)) + '</p><div class="markdown-content">' + contentHtml(item.body_markdown) + "</div>" +
       galleryMarkup(item.gallery_images, target, label) + "</article>";
   }
   function empty(target, message) { target.innerHTML = '<p class="cms-empty">' + esc(message) + "</p>"; }
@@ -129,7 +99,7 @@
     if (description) description.textContent = page.description || "";
     var meta = document.querySelector('meta[name="description"]');
     if (meta && page.description) meta.content = page.description;
-    if (content) content.innerHTML = markdown(page.body_markdown || "");
+    if (content) content.innerHTML = contentHtml(page.body_markdown || "");
     var imagePage = targets.page === "home" ? (profilePage || page) : page;
     if (imagePage.image_url) {
       var imageUrl = safeImageUrl(imagePage.image_url);

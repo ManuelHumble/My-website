@@ -44,18 +44,32 @@ The anon key is intended to be visible in a public site. The row-level security 
 
 ## 3. Deploy the site
 
-This folder includes `netlify.toml` for a static Netlify deploy. Put the project in a Git repository, connect that repository to Netlify, and deploy the root folder. There is no build command. Netlify serves the public pages and `/admin/` over HTTPS; Supabase holds the editable content.
+The project is compatible with Vercel's static deployment and its `/api/contact.js` serverless function. Connect the GitHub repository to Vercel and deploy the root folder with no build command. Vercel serves the public pages and `/admin/` over HTTPS; Supabase holds the editable content.
 
-The project currently has no live deployment, so the Netlify site and Supabase project still need to be connected. After that setup, new content is published from the admin and appears on the site without a code deploy.
+After the repository is connected, pushes to `main` deploy the site. New content published from the admin appears through Supabase without a code deploy.
+
+## Contact form email delivery
+
+The contact form posts to the Vercel function at `/api/contact`. It does not put an email API key in browser code or open a local mail app. The implementation uses [Resend](https://resend.com/), which is suitable for a small Vercel-hosted site.
+
+1. Create a Resend account and verify the domain you want to send from.
+2. In the Vercel project, open **Settings → Environment Variables** and add these values for Production (and Preview if you want to test there):
+   - `RESEND_API_KEY`: the secret Resend API key. Keep it in Vercel only; never add it to `cms-config.js` or Git.
+   - `CONTACT_FROM_EMAIL`: a verified sender such as `Website contact <hello@okoroemmanuelnjoku.com>`.
+   - `CONTACT_TO_EMAIL`: optional; defaults to `okoromanuel@gmail.com`.
+   - `ALLOWED_ORIGINS`: optional comma-separated origins. The production domain, Vercel domain and local ports are allowed by default.
+3. Redeploy after saving the variables. Until these values exist, the form returns a clear configuration error and does not pretend an email was sent.
+
+The function validates name, email and message length server-side, rejects the hidden honeypot field and rapid submissions, limits each client connection to five messages per 15 minutes, and accepts requests only from the configured site origins. Resend receives the visitor's email as `reply_to` so replies go directly to them.
 
 ## 4. Use the admin
 
 1. Open `https://YOUR-SITE/admin/` and sign in with `okoromanuel@gmail.com` and its Supabase password. If you do not have a password yet, select **Forgot password?**, open the email from Supabase, and follow the link back to `/admin/`. Choose a new password of at least 10 characters. Use a password manager and do not reuse a password from another site.
 2. Choose **Projects**, **Articles**, or **Pages**. The Pages list contains Home, About, Projects, Blog, and Contact. To populate the database with the existing starter content, choose **Import existing site content** from an empty content list. Draft articles and the sample data-quality concept stay drafts. Existing database records are preserved.
-3. Add or edit the title, URL slug, summary, tags, link, image, image title, alternative text, image caption/credit, and full Markdown article or project notes.
+3. Add or edit the title, URL slug, summary, tags, link, image, image title, alternative text, image caption/credit, and full project or article content in the rich-text editor. Existing Markdown notes remain supported and are converted safely when edited.
 4. Use **Save draft** to keep an item private. Choose **Publish** to show it publicly. Delete asks for confirmation before removal.
 
-Markdown supports headings (`##`), paragraphs, lists, emphasis, links, quotes, and inline code. Use the preview button before publishing. Upload multiple gallery images (JPG, PNG, WebP, or AVIF, up to 8 MB each) or add image URLs. Every gallery image has its own title, alternative text, caption/credit, and ordering controls. Cover images can also be uploaded or referenced by a public URL. Add meaningful alternative text for informative images and credit text where required. The About page entry controls the shared profile picture displayed on both About and Home, its competency list, and profile links. Page deletion removes the CMS override and restores the built-in page; it does not remove the route or navigation.
+The rich-text editor supports font family and size, headings, paragraphs, bold, italic, underline, lists, alignment, links, undo and redo. Content is sanitized before it is saved and again before public rendering. Older Markdown supports headings (`##`), paragraphs, lists, emphasis, links, quotes, and inline code. Use the preview button before publishing. Upload multiple gallery images (JPG, PNG, WebP, or AVIF, up to 8 MB each) or add image URLs. Every gallery image has its own title, alternative text, caption/credit, and ordering controls. Cover images can also be uploaded or referenced by a public URL. Add meaningful alternative text for informative images and credit text where required. The About page entry controls the shared profile picture displayed on both Home and About, its competency list, and profile links. Page deletion removes the CMS override and restores the built-in page; it does not remove the route or navigation.
 
 Only the signed-in owner email can open the editor and manage content. Supabase database RLS and Storage policies enforce the same restriction on every CMS write and image change. Hiding controls in the browser is not the security boundary. Do not share the administrator password or public signup links.
 

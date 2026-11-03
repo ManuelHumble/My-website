@@ -27,14 +27,42 @@ if (sampleSelect && runCheck && result) {
   runCheck.addEventListener("click", () => { checked = true; paintRecord(); });
 }
 
-document.querySelector("#contact-form")?.addEventListener("submit", event => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const subject = encodeURIComponent(`Portfolio enquiry from ${form.get("name")}`);
-  const body = encodeURIComponent(`Name: ${form.get("name")}\nEmail: ${form.get("email")}\n\n${form.get("message")}`);
-  document.querySelector("#form-note").textContent = "Your email draft is ready in your default mail app.";
-  window.location.href = `mailto:okoromanuel@gmail.com?subject=${subject}&body=${body}`;
-});
+const contactForm = document.querySelector("#contact-form");
+if (contactForm) {
+  const startedAt = contactForm.querySelector("#form-started-at");
+  if (startedAt) startedAt.value = String(Date.now());
+  contactForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = new FormData(contactForm);
+    const name = String(form.get("name") || "").trim();
+    const email = String(form.get("email") || "").trim();
+    const message = String(form.get("message") || "").trim();
+    const note = document.querySelector("#form-note");
+    const button = contactForm.querySelector("[type=submit]");
+    if (form.get("website")) return;
+    if (name.length < 2 || name.length > 100) { note.textContent = "Please enter your name."; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { note.textContent = "Please enter a valid email address."; return; }
+    if (message.length < 10 || message.length > 5000) { note.textContent = "Please enter a message between 10 and 5,000 characters."; return; }
+    button.disabled = true;
+    note.textContent = "Sending your message…";
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ name, email, message, website: form.get("website"), formStartedAt: Number(form.get("form_started_at")) || 0 })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "The message could not be sent. Please try again.");
+      note.textContent = result.message || "Thanks — your message has been sent.";
+      contactForm.reset();
+      if (startedAt) startedAt.value = String(Date.now());
+    } catch (error) {
+      note.textContent = error.message || "The message could not be sent. Please try again later.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
 
 document.querySelectorAll(".year").forEach(year => { year.textContent = new Date().getFullYear(); });
 
