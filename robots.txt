@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /api/
+Disallow: /CMS-SETUP.md
+Disallow: /EDITING-GUIDE.md
+Disallow: /supabase-schema.sql
+Disallow: /supabase-admin-email-migration.sql
+
+Sitemap: https://okoroemmanuelnjoku.com/sitemap.xml
