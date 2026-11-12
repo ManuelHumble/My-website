@@ -1,6 +1,7 @@
 const recentSubmissions = new Map();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CONTROL_PATTERN = /[\u0000-\u001f\u007f]/;
+const MESSAGE_CONTROL_PATTERN = /[\u0000-\u0008\u000b-\u000c\u000e-\u001f\u007f]/;
 const DEFAULT_ORIGINS = [
   'https://okoroemmanuelnjoku.com',
   'https://www.okoroemmanuelnjoku.com',
@@ -56,7 +57,7 @@ module.exports = async function contactHandler(req, res) {
   if (startedAt && Date.now() - startedAt < 2000) return json(res, 400, {error: 'Please take a moment before sending.'}, origin);
   if (name.length < 2 || name.length > 100 || CONTROL_PATTERN.test(name)) return json(res, 400, {error: 'Enter a valid name.'}, origin);
   if (email.length > 254 || !EMAIL_PATTERN.test(email) || CONTROL_PATTERN.test(email)) return json(res, 400, {error: 'Enter a valid email address.'}, origin);
-  if (!message || message.length > 5000 || CONTROL_PATTERN.test(message)) return json(res, 400, {error: 'Please enter a message (maximum 5,000 characters).'}, origin);
+  if (!message || message.length > 5000 || MESSAGE_CONTROL_PATTERN.test(message)) return json(res, 400, {error: 'Please enter a message (maximum 5,000 characters).'}, origin);
 
   const now = Date.now();
   const ip = clientIp(req);

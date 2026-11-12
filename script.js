@@ -5,6 +5,8 @@ const samples = {
   duplicate: { patient: "PT-2048", date: "2026-06-25", diagnosis: "H52.13", prescription: "−1.25 / −1.25 D", followup: "2026-07-23", status: "Needs review", message: "Patient identifier matches another sample encounter. Check encounter keys before aggregation.", alert: true }
 };
 
+const MESSAGE_CONTROL_PATTERN = /[\u0000-\u0008\u000b-\u000c\u000e-\u001f\u007f]/;
+
 const sampleSelect = document.querySelector("#sample-record");
 const runCheck = document.querySelector("#check-record");
 const result = document.querySelector("#check-result");
@@ -42,7 +44,7 @@ if (contactForm) {
     if (form.get("website")) return;
     if (name.length < 2 || name.length > 100) { note.textContent = "Please enter your name."; return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { note.textContent = "Please enter a valid email address."; return; }
-    if (!message || message.length > 5000) { note.textContent = "Please enter a message (maximum 5,000 characters)."; return; }
+    if (!message || message.length > 5000 || MESSAGE_CONTROL_PATTERN.test(message)) { note.textContent = "Please enter a message (maximum 5,000 characters)."; return; }
     button.disabled = true;
     note.textContent = "Sending your message…";
     try {
