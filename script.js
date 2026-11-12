@@ -42,7 +42,7 @@ if (contactForm) {
     if (form.get("website")) return;
     if (name.length < 2 || name.length > 100) { note.textContent = "Please enter your name."; return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { note.textContent = "Please enter a valid email address."; return; }
-    if (message.length < 10 || message.length > 5000) { note.textContent = "Please enter a message between 10 and 5,000 characters."; return; }
+    if (!message || message.length > 5000) { note.textContent = "Please enter a message (maximum 5,000 characters)."; return; }
     button.disabled = true;
     note.textContent = "Sending your message…";
     try {

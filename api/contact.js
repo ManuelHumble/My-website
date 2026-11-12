@@ -56,7 +56,7 @@ module.exports = async function contactHandler(req, res) {
   if (startedAt && Date.now() - startedAt < 2000) return json(res, 400, {error: 'Please take a moment before sending.'}, origin);
   if (name.length < 2 || name.length > 100 || CONTROL_PATTERN.test(name)) return json(res, 400, {error: 'Enter a valid name.'}, origin);
   if (email.length > 254 || !EMAIL_PATTERN.test(email) || CONTROL_PATTERN.test(email)) return json(res, 400, {error: 'Enter a valid email address.'}, origin);
-  if (message.length < 10 || message.length > 5000 || CONTROL_PATTERN.test(message)) return json(res, 400, {error: 'Enter a message between 10 and 5,000 characters.'}, origin);
+  if (!message || message.length > 5000 || CONTROL_PATTERN.test(message)) return json(res, 400, {error: 'Please enter a message (maximum 5,000 characters).'}, origin);
 
   const now = Date.now();
   const ip = clientIp(req);

@@ -24,6 +24,10 @@ import { contentToHtml } from './content-sanitize.js';
     try { var url = new URL(value); return ["http:","https:"].includes(url.protocol) ? url.href : ""; }
     catch (_) { return ""; }
   }
+  function updateMeta(selector, value) {
+    var meta = document.querySelector(selector);
+    if (meta && value) meta.setAttribute("content", value);
+  }
   function contentHtml(raw) { return contentToHtml(raw); }
   function tagsMarkup(tags) {
     tags = Array.isArray(tags) ? tags : [];
@@ -88,17 +92,23 @@ import { contentToHtml } from './content-sanitize.js';
     var title = document.querySelector("[data-cms-page-title]");
     var description = document.querySelector("[data-cms-page-description]");
     var content = document.querySelector("[data-cms-page-content]");
+    var pageTitle = String(page.title || "").trim();
+    var pageDescription = String(page.description || "").trim();
+    var browserTitle = pageTitle ? pageTitle + " | Okoro Emmanuel" : document.title;
     if (title) {
       if (targets.page === "home") {
-        var homeTitle = String(page.title || "").trim().split(/\s+/);
-        title.innerHTML = homeTitle.length > 1 ? esc(homeTitle.shift()) + "<br><span>" + esc(homeTitle.join(" ")) + "</span>" : esc(page.title);
+        var homeTitle = pageTitle.split(/\s+/);
+        title.innerHTML = homeTitle.length > 1 ? esc(homeTitle.shift()) + "<br><span>" + esc(homeTitle.join(" ")) + "</span>" : esc(pageTitle);
       }
-      else title.textContent = page.title;
-      document.title = page.title + " | Okoro Emmanuel";
+      else title.textContent = pageTitle;
+      document.title = browserTitle;
     }
-    if (description) description.textContent = page.description || "";
-    var meta = document.querySelector('meta[name="description"]');
-    if (meta && page.description) meta.content = page.description;
+    if (description) description.textContent = pageDescription;
+    updateMeta('meta[name="description"]', pageDescription);
+    updateMeta('meta[property="og:title"]', browserTitle);
+    updateMeta('meta[property="og:description"]', pageDescription);
+    updateMeta('meta[name="twitter:title"]', browserTitle);
+    updateMeta('meta[name="twitter:description"]', pageDescription);
     if (content) content.innerHTML = contentHtml(page.body_markdown || "");
     var imagePage = targets.page === "home" ? (profilePage || page) : page;
     if (imagePage.image_url) {
