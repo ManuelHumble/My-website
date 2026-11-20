@@ -74,9 +74,17 @@ import { contentToHtml } from './content-sanitize.js';
     return Number.isNaN(date.valueOf()) ? "Recently published" : new Intl.DateTimeFormat(undefined, {year:"numeric",month:"long",day:"numeric"}).format(date);
   }
   function articleAnchor(item) { return "article-" + item.slug; }
+  function articleThumbnail(item, href, label) {
+    var url = safeImageUrl(item.image_url);
+    if (!url) return '<a class="article-thumb article-thumb-empty" href="' + esc(href) + '" aria-label="' + esc(label) + '"><span aria-hidden="true">Article note</span></a>';
+    var alt = item.image_alt || item.image_title || item.title || "Article thumbnail";
+    return '<a class="article-thumb" href="' + esc(href) + '" aria-label="' + esc(label) + '"><img src="' + esc(url) + '" alt="' + esc(alt) + '" title="' + esc(item.image_title || "") + '" loading="lazy"></a>';
+  }
   function articleRow(item) {
     var anchor = articleAnchor(item);
-    return '<article><time datetime="' + esc(item.published_at || "") + '">' + esc(dateLabel(item.published_at)) + '</time><div><h3><a href="#' + esc(anchor) + '">' + esc(item.title) + "</a></h3><p>" + esc(item.description) + "</p>" + tagsMarkup(item.tags) + '</div><a href="#' + esc(anchor) + '" aria-label="Read ' + esc(item.title) + '">↘</a></article>';
+    var target = "#" + anchor;
+    var label = "Read " + item.title;
+    return '<article class="article-card">' + articleThumbnail(item, target, label) + '<div class="article-card-copy"><div class="article-card-meta"><time datetime="' + esc(item.published_at || "") + '">' + esc(dateLabel(item.published_at)) + '</time></div><h2><a class="article-card-title" href="' + esc(target) + '">' + esc(item.title) + "</a></h2><p>" + esc(item.description) + "</p>" + tagsMarkup(item.tags) + '</div><a class="article-card-arrow" href="' + esc(target) + '" aria-label="' + esc(label) + '">↘</a></article>';
   }
   function articleBody(item) {
     var anchor = articleAnchor(item);

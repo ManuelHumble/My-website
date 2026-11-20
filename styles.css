@@ -103,3 +103,21 @@ figure figcaption{font-size:13px}
 /* CMS-uploaded media keeps its source colours. Archival reference imagery above retains its deliberate treatment. */
 img[data-cms-page-image],.project-image img,.content-gallery img,.profile-portrait img,.about-portrait img{filter:none}
 .contact-trap{position:absolute;left:-10000px;clip:rect(0 0 0 0);clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+
+/* Blog listing rows: a consistent thumbnail-led reading path with a quiet hover state. */
+.article-list-page{display:grid;gap:16px}
+.article-list-page article.article-card{display:grid;grid-template-columns:clamp(170px,22vw,260px) minmax(0,1fr) 30px;gap:clamp(22px,4vw,52px);align-items:center;margin:0;padding:clamp(20px,3vw,34px);background:#eef0e8;transition:background-color .2s ease,transform .2s var(--ease)}
+.article-list-page article.article-card:hover{background:#f4f5ee;transform:translateY(-2px)}
+.article-thumb{display:block;aspect-ratio:4/3;min-width:0;overflow:hidden;background:#d1d8ce;color:#315f49}
+.article-thumb img{width:100%;height:100%;object-fit:cover;object-position:50% 35%;filter:none;transition:transform .25s var(--ease)}
+.article-thumb:hover img{transform:scale(1.03)}
+.article-thumb-empty{display:flex;align-items:flex-end;padding:18px;font-size:14px;font-weight:600;letter-spacing:.01em}
+.article-card-copy{min-width:0}
+.article-card-meta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;color:#58645d;font-size:14px;margin-bottom:10px}
+.article-card-meta time{padding-top:0}
+.article-list-page h2.article-card-title,.article-list-page h2{font:clamp(26px,3vw,40px)/1.12 var(--serif);font-weight:300;letter-spacing:-.02em;margin:0 0 8px;text-wrap:balance}
+.article-list-page h2 a:hover{color:#2f5949}
+.article-card-copy p{max-width:62ch;margin:0;color:#4b5850;font-size:16px}
+.article-card-copy .tags{margin:16px 0 0;color:#315f49;font-size:14px}
+.article-card-arrow{justify-self:end;font-size:22px;color:#2f5949}
+@media(max-width:760px){.article-list-page article.article-card{grid-template-columns:1fr;gap:16px;padding:18px}.article-list-page article.article-card>.article-thumb,.article-list-page article.article-card>.article-card-arrow{grid-column:1;grid-row:auto}.article-thumb{width:100%;aspect-ratio:4/3}.article-card-arrow{justify-self:end}.article-card-copy p{font-size:16px}}
